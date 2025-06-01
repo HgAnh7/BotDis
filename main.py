@@ -4,7 +4,6 @@ from bot.random import *
 from discord.ext import commands
 
 TOKEN = os.getenv("DISCORD_TOKEN")
-
 intents = discord.Intents.all()
 bot = commands.Bot(command_prefix="/", intents=intents)
 
@@ -17,16 +16,9 @@ async def on_ready():
         print(f"Đã đồng bộ {len(synced)} lệnh slash!")
     except Exception as e:
         print(f"Lỗi khi đồng bộ lệnh slash: {e}")
-# Random
-register_nude(bot)
-register_girl(bot)
-register_butt(bot)
-register_anime(bot)
-register_pussy(bot)
-register_cosplay(bot)
-register_imganime(bot)
-register_girlsexy(bot)
-register_breastsqueeze(bot)
+
+# Register all commands with optimized approach
+register_all_commands(bot)
 
 if __name__ == '__main__':
     print("Bot Discord đang hoạt động...")
