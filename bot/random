@@ -3,92 +3,64 @@ import discord
 from pathlib import Path
 from discord.ext import commands
 
-# Danh sách các kênh được phép sử dụng lệnh
-ALLOWED_CHANNELS = [
-    1375707188252901376,  # Thay bằng ID của kênh thực tế
-    1375707367051886654,
-]
-
-# Kênh gửi thông báo lỗi
+# Configuration
+ALLOWED_CHANNELS = [1375707188252901376, 1375707367051886654]
 ERROR_CHANNEL_ID = 1377693583741812867
 
-# Hàm load danh sách URL từ file
-def load_images(file_path: Path):
+# Command definitions
+COMMANDS = {
+    "nude": ["Nude Ngẫu Nhiên", "Gửi ảnh nude ngẫu nhiên (only: 🔞┊nsfw)"],
+    "butt": ["Butt Ngẫu Nhiên", "Gửi ảnh butt ngẫu nhiên (only: 🔞┊nsfw)"],
+    "pussy": ["Pussy Ngẫu Nhiên", "Gửi ảnh pussy ngẫu nhiên (only: 🔞┊nsfw)"],
+    "cosplay": ["Cosplay Ngẫu Nhiên", "Gửi ảnh cosplay ngẫu nhiên (only: 🔞┊nsfw)"],
+    "anime": ["Anime Ngẫu Nhiên", "Gửi ảnh anime ngẫu nhiên (only: 🔞┊nsfw)"],
+    "girlsexy": ["Gái Sexy Ngẫu Nhiên", "Gửi ảnh gái sexy ngẫu nhiên (only: 🔞┊nsfw)"],
+    "breastsqueeze": ["Breastsqueeze Ngẫu Nhiên", "Gửi ảnh breastsqueeze ngẫu nhiên (only: 🔞┊nsfw)"]
+}
+
+# Load all images with error handling
+def load_all_images():
+    collections = {}
+    for cmd in COMMANDS:
+        try:
+            file_path = Path(f"bot/url/{cmd}")
+            collections[cmd] = [line.strip() for line in file_path.read_text(encoding="utf-8").splitlines() if line.strip()] if file_path.exists() else []
+        except Exception as e:
+            print(f"[Load Images] Lỗi khi đọc file {cmd}: {e}")
+            collections[cmd] = []
+    return collections
+
+IMAGE_COLLECTIONS = load_all_images()
+
+async def send_random_image(interaction: discord.Interaction, bot: commands.Bot, cmd: str):
+    if interaction.channel_id not in ALLOWED_CHANNELS:
+        return await interaction.response.send_message(
+            "❌ Lệnh này chỉ có thể sử dụng trong các kênh được chỉ định!", ephemeral=True)
+    
+    if not (images := IMAGE_COLLECTIONS[cmd]):
+        if error_channel := bot.get_channel(ERROR_CHANNEL_ID):
+            await error_channel.send(f"❌ [{cmd.title()}] Danh sách ảnh chưa được tải hoặc trống.")
+        return await interaction.response.send_message("❌ Lỗi: Danh sách ảnh không tồn tại.", ephemeral=True)
+    
     try:
-        with file_path.open("r", encoding="utf-8") as file:
-            images = [line.strip() for line in file if line.strip()]
-        return images
+        embed = discord.Embed(title=COMMANDS[cmd][0])
+        embed.set_image(url=random.choice(images))
+        await interaction.response.send_message(embed=embed)
     except Exception as e:
-        print(f"[Load Images] Lỗi khi đọc file {file_path}: {e}")
-        return []
+        if error_channel := bot.get_channel(ERROR_CHANNEL_ID):
+            await error_channel.send(f"❌ [{cmd.title()}] Lỗi: {e}")
+        await interaction.response.send_message("❌ Đã có lỗi xảy ra. Vui lòng thử lại sau.", ephemeral=True)
 
-# Cache danh sách URL khi bot khởi động
-COSPLAY_FILE_PATH = Path("bot/url/cosplay")
-COSPLAY_IMAGES = load_images(COSPLAY_FILE_PATH)
+def register_all_commands(bot: commands.Bot):
+    """Register all commands dynamically"""
+    for cmd, (title, desc) in COMMANDS.items():
+        # Fix closure issue with lambda and default parameter
+        def create_command(cmd_name=cmd):
+            async def image_command(interaction: discord.Interaction):
+                await send_random_image(interaction, bot, cmd_name)
+            return image_command
+        
+        bot.tree.command(name=cmd, description=desc)(create_command())
 
-GIRLSEXY_FILE_PATH = Path("bot/url/girlsexy")
-GIRLSEXY_IMAGES = load_images(GIRLSEXY_FILE_PATH)
-
-def register_cosplay(bot: commands.Bot):
-    @bot.tree.command(name="cosplay", description="Gửi ảnh cosplay ngẫu nhiên (only: 🔞┊nsfw)")
-    async def cosplay(interaction: discord.Interaction):
-        if interaction.channel_id not in ALLOWED_CHANNELS:
-            await interaction.response.send_message(
-                "❌ Lệnh này chỉ có thể sử dụng trong các kênh được chỉ định!",
-                ephemeral=True
-            )
-            return
-
-        if not COSPLAY_IMAGES:
-            error_message = "Danh sách ảnh chưa được tải hoặc trống."
-            error_channel = bot.get_channel(ERROR_CHANNEL_ID)
-            if error_channel:
-                await error_channel.send(f"❌ [Cosplay] {error_message}")
-            await interaction.response.send_message("❌ Lỗi: Danh sách ảnh không tồn tại.", ephemeral=True)
-            return
-
-        try:
-            selected_image = random.choice(COSPLAY_IMAGES)
-            embed = discord.Embed(title="Cosplay Ngẫu Nhiên")
-            embed.set_image(url=selected_image)
-            await interaction.response.send_message(embed=embed)
-        except Exception as e:
-            error_channel = bot.get_channel(ERROR_CHANNEL_ID)
-            if error_channel:
-                await error_channel.send(f"❌ [Cosplay] Lỗi: {e}")
-            await interaction.response.send_message(
-                "❌ Đã có lỗi xảy ra. Vui lòng thử lại sau.",
-                ephemeral=True
-            )
-
-def register_girlsexy(bot: commands.Bot):
-    @bot.tree.command(name="girlsexy", description="Gửi ảnh gái sexy ngẫu nhiên (only: 🔞┊nsfw)")
-    async def girlsexy(interaction: discord.Interaction):
-        if interaction.channel_id not in ALLOWED_CHANNELS:
-            await interaction.response.send_message(
-                "❌ Lệnh này chỉ có thể sử dụng trong các kênh được chỉ định!",
-                ephemeral=True
-            )
-            return
-
-        if not GIRLSEXY_IMAGES:
-            error_message = "Danh sách ảnh chưa được tải hoặc trống."
-            error_channel = bot.get_channel(ERROR_CHANNEL_ID)
-            if error_channel:
-                await error_channel.send(f"❌ [Manga] {error_message}")
-            await interaction.response.send_message("❌ Lỗi: Danh sách ảnh không tồn tại.", ephemeral=True)
-            return
-
-        try:
-            selected_image = random.choice(GIRLSEXY_IMAGES)
-            embed = discord.Embed(title="Gái Sexy Ngẫu Nhiên")
-            embed.set_image(url=selected_image)
-            await interaction.response.send_message(embed=embed)
-        except Exception as e:
-            error_channel = bot.get_channel(ERROR_CHANNEL_ID)
-            if error_channel:
-                await error_channel.send(f"❌ [Girlsexy] Lỗi: {e}")
-            await interaction.response.send_message(
-                "❌ Đã có lỗi xảy ra. Vui lòng thử lại sau.",
-                ephemeral=True
-            )
+# Convenience functions - chỉ cần gọi 1 lần register_all_commands()
+register_nude = register_butt = register_pussy = register_cosplay = register_anime = register_girlsexy = register_breastsqueeze = register_all_commands
