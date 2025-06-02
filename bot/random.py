@@ -28,7 +28,7 @@ COMMANDS = {
         "restricted": True  # Giới hạn kênh
     },
     "cosplay": {
-        "title": "Ảnh Cosplay Ngẫu Nhiên", 
+        "title": "Ảnh Cosplay Ngẫu Nhiên (only: 🔞┊nsfw)",
         "desc": "Gửi ảnh cosplay ngẫu nhiên",
         "path": "bot/url/cosplay",
         "restricted": True  # Không giới hạn kênh
