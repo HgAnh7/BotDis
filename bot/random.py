@@ -3,37 +3,79 @@ import discord
 from pathlib import Path
 from discord.ext import commands
 
-# Configuration
+# Cấu hình
 ALLOWED_CHANNELS = [1375707188252901376, 1375707367051886654]
 ERROR_CHANNEL_ID = 1377693583741812867
 
-# Command definitions
+# Định nghĩa lệnh với đường dẫn file tùy chỉnh và giới hạn kênh
 COMMANDS = {
-    "nude": ["Nude Ngẫu Nhiên", "Gửi ảnh nude ngẫu nhiên (only: 🔞┊nsfw)"],
-    "butt": ["Butt Ngẫu Nhiên", "Gửi ảnh butt ngẫu nhiên (only: 🔞┊nsfw)"],
-    "pussy": ["Pussy Ngẫu Nhiên", "Gửi ảnh pussy ngẫu nhiên (only: 🔞┊nsfw)"],
-    "cosplay": ["Cosplay Ngẫu Nhiên", "Gửi ảnh cosplay ngẫu nhiên (only: 🔞┊nsfw)"],
-    "anime": ["Anime Ngẫu Nhiên", "Gửi ảnh anime ngẫu nhiên (only: 🔞┊nsfw)"],
-    "girlsexy": ["Gái Sexy Ngẫu Nhiên", "Gửi ảnh gái sexy ngẫu nhiên (only: 🔞┊nsfw)"],
-    "breastsqueeze": ["Breastsqueeze Ngẫu Nhiên", "Gửi ảnh breastsqueeze ngẫu nhiên (only: 🔞┊nsfw)"]
+    "nude": {
+        "title": "Ảnh Nude Ngẫu Nhiên", 
+        "desc": "Gửi ảnh nude ngẫu nhiên (only: 🔞┊nsfw)",
+        "path": "bot/url/nude",
+        "restricted": True  # Giới hạn kênh
+    },
+    "butt": {
+        "title": "Ảnh Butt Ngẫu Nhiên", 
+        "desc": "Gửi ảnh butt ngẫu nhiên (only: 🔞┊nsfw)",
+        "path": "bot/url/butt",
+        "restricted": True  # Giới hạn kênh
+    },
+    "pussy": {
+        "title": "Ảnh Pussy Ngẫu Nhiên", 
+        "desc": "Gửi ảnh pussy ngẫu nhiên (only: 🔞┊nsfw)",
+        "path": "bot/url/pussy",
+        "restricted": True  # Giới hạn kênh
+    },
+    "cosplay": {
+        "title": "Ảnh Cosplay Ngẫu Nhiên", 
+        "desc": "Gửi ảnh cosplay ngẫu nhiên",
+        "path": "bot/url/cosplay",
+        "restricted": True  # Không giới hạn kênh
+    },
+    "anime": {
+        "title": "Ảnh Anime Ngẫu Nhiên", 
+        "desc": "Gửi ảnh anime ngẫu nhiên",
+        "path": "bot/url/anime",
+        "restricted": False  # Không giới hạn kênh
+    },
+    "blowjob": {
+        "title": "Ảnh Blow Job Ngẫu Nhiên", 
+        "desc": "Gửi ảnh blow job ngẫu nhiên (only: 🔞┊nsfw)",
+        "path": "bot/url/nsfw/blowjob",
+        "restricted": True  # Giới hạn kênh
+    },
+    "girlsexy": {
+        "title": "Ảnh Gái Sexy Ngẫu Nhiên", 
+        "desc": "Gửi ảnh gái sexy ngẫu nhiên (only: 🔞┊nsfw)",
+        "path": "bot/url/girlsexy",
+        "restricted": True  # Giới hạn kênh
+    },
+    "breastsqueeze": {
+        "title": "Breastsqueeze Ngẫu Nhiên", 
+        "desc": "Gửi ảnh breastsqueeze ngẫu nhiên (only: 🔞┊nsfw)",
+        "path": "bot/url/breastsqueeze",
+        "restricted": True  # Giới hạn kênh
+    }
 }
 
-# Load all images with error handling
+# Tải tất cả ảnh với xử lý lỗi
 def load_all_images():
     collections = {}
-    for cmd in COMMANDS:
+    for cmd, config in COMMANDS.items():
         try:
-            file_path = Path(f"bot/url/{cmd}")
+            file_path = Path(config["path"])
             collections[cmd] = [line.strip() for line in file_path.read_text(encoding="utf-8").splitlines() if line.strip()] if file_path.exists() else []
         except Exception as e:
-            print(f"[Load Images] Lỗi khi đọc file {cmd}: {e}")
+            print(f"[Tải Ảnh] Lỗi khi đọc file {cmd}: {e}")
             collections[cmd] = []
     return collections
 
 IMAGE_COLLECTIONS = load_all_images()
 
 async def send_random_image(interaction: discord.Interaction, bot: commands.Bot, cmd: str):
-    if interaction.channel_id not in ALLOWED_CHANNELS:
+    # Kiểm tra giới hạn kênh nếu lệnh có restricted = True
+    if COMMANDS[cmd].get("restricted", False) and interaction.channel_id not in ALLOWED_CHANNELS:
         return await interaction.response.send_message(
             "❌ Lệnh này chỉ có thể sử dụng trong các kênh được chỉ định!", ephemeral=True)
     
@@ -43,7 +85,7 @@ async def send_random_image(interaction: discord.Interaction, bot: commands.Bot,
         return await interaction.response.send_message("❌ Lỗi: Danh sách ảnh không tồn tại.", ephemeral=True)
     
     try:
-        embed = discord.Embed(title=COMMANDS[cmd][0])
+        embed = discord.Embed(title=COMMANDS[cmd]["title"])
         embed.set_image(url=random.choice(images))
         await interaction.response.send_message(embed=embed)
     except Exception as e:
@@ -52,15 +94,15 @@ async def send_random_image(interaction: discord.Interaction, bot: commands.Bot,
         await interaction.response.send_message("❌ Đã có lỗi xảy ra. Vui lòng thử lại sau.", ephemeral=True)
 
 def register_all_commands(bot: commands.Bot):
-    """Register all commands dynamically"""
-    for cmd, (title, desc) in COMMANDS.items():
-        # Fix closure issue with lambda and default parameter
+    """Đăng ký tất cả lệnh tự động"""
+    for cmd, config in COMMANDS.items():
+        # Sửa lỗi closure với lambda và tham số mặc định
         def create_command(cmd_name=cmd):
             async def image_command(interaction: discord.Interaction):
                 await send_random_image(interaction, bot, cmd_name)
             return image_command
         
-        bot.tree.command(name=cmd, description=desc)(create_command())
+        bot.tree.command(name=cmd, description=config["desc"])(create_command())
 
-# Convenience functions - chỉ cần gọi 1 lần register_all_commands()
+# Các hàm tiện lợi - chỉ cần gọi 1 lần register_all_commands()
 register_nude = register_butt = register_pussy = register_cosplay = register_anime = register_girlsexy = register_breastsqueeze = register_all_commands
