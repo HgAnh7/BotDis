@@ -2,6 +2,7 @@ import os
 import discord
 from bot.random import *
 from discord.ext import commands
+from bot.emoji import register_emoji
 
 TOKEN = os.getenv("DISCORD_TOKEN")
 intents = discord.Intents.all()
@@ -18,6 +19,7 @@ async def on_ready():
         print(f"Lỗi khi đồng bộ lệnh slash: {e}")
 
 # Register all commands with optimized approach
+register_emoji(bot)
 register_all_commands(bot)
 
 if __name__ == '__main__':
